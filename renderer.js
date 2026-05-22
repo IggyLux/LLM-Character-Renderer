@@ -104,7 +104,7 @@ function drawParticles(ctx, s) {
       life: Math.random(),
       maxLife: .5 + Math.random() * .5,
       size: (s.min_size || 2) + Math.random() * ((s.max_size || 5) - (s.min_size || 2)),
-      color: Array.isArray(s.colors) * s.colors[Math.floor(Math.random() * s.colors.length)] : (s.color || '#fff')
+      color: Array.isArray(s.colors) ? s.colors[Math.floor(Math.random() * s.colors.length)] : (s.color || '#fff')
     }));
   }
   pState[id].forEach(p => {
