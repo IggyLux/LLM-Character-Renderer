@@ -1,19 +1,26 @@
 export class CharacterEntity {
   constructor(jsonData, startX, startY, isPlayer = false) {
-    this.data = jsonData;
-    this.name = jsonData.name || "Nameless";
-    this.isPlayer = isPlayer;
-    // Merge default stats
-    const defaultStats = {
-      hp: 80, max_hp: 80,
-      attack: 20, defense: 5,
-      speed: 80,        // pixels per second
-      attack_range: 45,
-      attack_cooldown: 1.2
-    };
-    this.stats = { ...defaultStats, ...(jsonData.stats || {}) };
-    this.stats.max_hp = this.stats.hp;
-    this.currentHp = this.stats.hp;
+  this.data = jsonData;
+  this.name = jsonData.name || "Nameless";
+  this.isPlayer = isPlayer;
+  
+  // Normalize stats: accept uppercase or lowercase
+  const rawStats = jsonData.stats || {};
+  const normalized = {};
+  for (let [k, v] of Object.entries(rawStats)) {
+    normalized[k.toLowerCase()] = v;
+  }
+  
+  const defaultStats = {
+    hp: 80, max_hp: 80,
+    attack: 20, defense: 5,
+    speed: 80,
+    attack_range: 65,         // increased from 45
+    attack_cooldown: 1.2
+  };
+  this.stats = { ...defaultStats, ...normalized };
+  this.stats.max_hp = this.stats.hp;
+  this.currentHp = this.stats.hp;
     
     this.pos = { x: startX, y: startY };
     this.vel = { x: 0, y: 0 };
