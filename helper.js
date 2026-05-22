@@ -78,7 +78,6 @@ export function darken(hex, amt) {
   return `rgb(${Math.round(c.r * (1 - amt))},${Math.round(c.g * (1 - amt))},${Math.round(c.b * (1 - amt))})`;
 }
 
-// Global execution bridge passed down to sandboxed AI functions
 export const executionBridge = {
   ev, evc, buildGrad, rRect, hex2rgb, rgba, darken, STAGE, imgCache
 };
