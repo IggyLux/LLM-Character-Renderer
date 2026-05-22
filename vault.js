@@ -37,17 +37,21 @@ export function saveToVault(charData, bgStyle, onGridRender, onBadgeUpdate) {
   updateVaultBadge(onBadgeUpdate);
 
   const btn = document.getElementById('save-vault-btn');
-  btn.classList.add('flash');
-  btn.textContent = '✓ Saved!';
-  setTimeout(() => {
-    btn.classList.remove('flash');
-    btn.textContent = '⊕ Save to Vault';
-  }, 900);
+  if (btn) {
+    btn.classList.add('flash');
+    btn.textContent = '✓ Saved!';
+    setTimeout(() => {
+      btn.classList.remove('flash');
+      btn.textContent = '⊕ Save to Vault';
+    }, 900);
+  }
 }
 
 export function renderVaultGrid(onGridRender, onBadgeUpdate) {
   const grid = document.getElementById('vault-grid');
   const countEl = document.getElementById('vault-count');
+  if (!grid || !countEl) return;
+  
   countEl.textContent = vault.length + ' SAVED';
   grid.innerHTML = vault.length === 0 ? '<div id="vault-empty">NO CHARACTERS<br>SAVED YET</div>' : '';
 
@@ -62,7 +66,7 @@ export function renderVaultGrid(onGridRender, onBadgeUpdate) {
     card.appendChild(bg);
 
     const miniCanvas = document.createElement('canvas');
-    miniCanvas.width = miniCanvas.height = 120; // VAULT_SIZE
+    miniCanvas.width = miniCanvas.height = 120;
     miniCanvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;';
     card.appendChild(miniCanvas);
     renderMiniCharacter(entry.data, miniCanvas);
@@ -89,10 +93,12 @@ export function updateVaultButtons() {
   const active = selectedVaultId !== null;
   const viewBtn = document.getElementById('vault-view-btn');
   const delBtn = document.getElementById('vault-delete-btn');
-  viewBtn.disabled = !active;
-  delBtn.disabled = !active;
-  viewBtn.classList.toggle('active', active);
-  delBtn.classList.toggle('active', active);
+  if (viewBtn && delBtn) {
+    viewBtn.disabled = !active;
+    delBtn.disabled = !active;
+    viewBtn.classList.toggle('active', active);
+    delBtn.classList.toggle('active', active);
+  }
 }
 
 export function updateVaultBadge(onBadgeUpdate) {
