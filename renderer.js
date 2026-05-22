@@ -1,8 +1,8 @@
-import { STAGE, ev, evc, buildGrad, rRect, hex2rgb, imgCache, showError } from './helpers.js';
+import { STAGE, ev, evc, buildGrad, rRect, hex2rgb, imgCache, executionBridge } from './helpers.js';
 
 export const pState = {};
 
-export function drawShape(ctx, canvas, s, t, dataContext = null) {
+export function drawShape(ctx, canvas, s, t) {
   ctx.save();
   ctx.translate(ev(s.x, t) || 0, ev(s.y, t) || 0);
   ctx.rotate((ev(s.rotation, t) || 0) * Math.PI / 180);
@@ -126,38 +126,18 @@ export function renderMiniCharacter(data, targetCanvas) {
   const mCtx = targetCanvas.getContext('2d');
   const scale = 120 / STAGE;
   mCtx.clearRect(0, 0, 120, 120);
+  
+  // Save base clean state to prevent leakage across card draws
   mCtx.save();
   mCtx.scale(scale, scale);
-  (data.canvas_shapes || []).forEach(s => drawShapeMini(mCtx, s, 0));
+  (data.canvas_shapes || []).forEach(s => drawShape(mCtx, targetCanvas, s, 0));
   if (data.canvas_code) {
-    try { new Function('ctx', 'canvas', 't', 'size', 'data', data.canvas_code)(mCtx, targetCanvas, 0, STAGE, data); }
-    catch (e) {}
-  }
-  mCtx.restore();
-}
-
-function drawShapeMini(mCtx, s, t) {
-  mCtx.save();
-  mCtx.translate(ev(s.x, t) || 0, ev(s.y, t) || 0);
-  mCtx.rotate((ev(s.rotation, t) || 0) * Math.PI / 180);
-  const sx = ev(s.scale_x, t) || ev(s.scale, t) || 1, sy = ev(s.scale_y, t) || ev(s.scale, t) || 1;
-  mCtx.scale(sx, sy);
-  const alpha = ev(s.alpha, t); mCtx.globalAlpha = alpha !== undefined ? alpha : 1;
-  if (s.composite) mCtx.globalCompositeOperation = s.composite;
-  if (s.shadow) { mCtx.shadowColor = s.shadow.color || 'transparent'; mCtx.shadowBlur = s.shadow.blur || 0; }
-  const fill = evc(s.fill, t), stroke = evc(s.stroke, t);
-  if (fill) mCtx.fillStyle = fill;
-  if (stroke) mCtx.strokeStyle = stroke;
-  if (s.line_width) mCtx.lineWidth = ev(s.line_width, t);
-  switch (s.type) {
-    case 'circle': mCtx.beginPath(); mCtx.arc(0, 0, ev(s.radius, t), 0, Math.PI * 2); if (fill) mCtx.fill(); if (stroke) mCtx.stroke(); break;
-    case 'ellipse': mCtx.beginPath(); mCtx.ellipse(0, 0, ev(s.rx, t), ev(s.ry, t), 0, 0, Math.PI * 2); if (fill) mCtx.fill(); if (stroke) mCtx.stroke(); break;
-    case 'rect': { const w = ev(s.width, t), h = ev(s.height, t); mCtx.beginPath(); mCtx.rect(-w / 2, -h / 2, w, h); if (fill) mCtx.fill(); if (stroke) mCtx.stroke(); break; }
-    case 'polygon': mCtx.beginPath(); (s.points || []).forEach(([px, py], i) => i === 0 ? mCtx.moveTo(ev(px, t), ev(py, t)) : mCtx.lineTo(ev(px, t), ev(py, t))); if (s.closed !== false) mCtx.closePath(); if (fill) mCtx.fill(); if (stroke) mCtx.stroke(); break;
-    case 'arc': mCtx.beginPath(); mCtx.arc(0, 0, ev(s.radius, t), (ev(s.start_angle, t) || 0) * Math.PI / 180, (ev(s.end_angle, t) || 360) * Math.PI / 180, false); if (fill) mCtx.fill(); if (stroke) mCtx.stroke(); break;
-    case 'line': mCtx.beginPath(); mCtx.moveTo(ev(s.x1, t), ev(s.y1, t)); mCtx.lineTo(ev(s.x2, t), ev(s.y2, t)); if (stroke) mCtx.stroke(); break;
-    case 'text': { const fs = ev(s.font_size, t) || 24; mCtx.font = `${s.font_style || ''} ${fs}px ${s.font_family || 'monospace'}`; mCtx.textAlign = s.align || 'center'; mCtx.textBaseline = mCtx.baseline || 'middle'; if (fill) mCtx.fillText(s.text || '', 0, 0); break; }
-    case 'path': { const p2 = new Path2D(s.d || ''); if (fill) mCtx.fill(p2); if (stroke) mCtx.stroke(p2); break; }
+    try { 
+      // Executing inside scope bridge mapping context functions cleanly
+      new Function('ctx', 'canvas', 't', 'size', 'data', 'helpers', 
+        'with(helpers){' + data.canvas_code + '}'
+      )(mCtx, targetCanvas, 0, STAGE, data, executionBridge); 
+    } catch (e) {}
   }
   mCtx.restore();
 }
