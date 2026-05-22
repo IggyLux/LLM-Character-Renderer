@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Character Renderer</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div id="page-bg"></div>
+  <div id="page-grid"></div>
+
+  <div id="vault-panel">
+    <div id="vault-inner">
+      <div id="vault-header">
+        <span id="vault-title">◈ Vault</span>
+        <span id="vault-count">0 SAVED</span>
+      </div>
+      <div id="vault-grid">
+        <div id="vault-empty">NO CHARACTERS<br>SAVED YET</div>
+      </div>
+      <div id="vault-actions">
+        <button class="vault-action-btn" id="vault-view-btn" disabled>▶ View</button>
+        <button class="vault-action-btn delete-btn" id="vault-delete-btn" disabled>✕ Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="frame">
+    <div class="side-deco" id="deco-l">
+      <span class="bs"></span><span class="bl"></span>
+      <span class="bs"></span><span class="bs"></span>
+      <span class="bl"></span><span class="bs"></span>
+    </div>
+    <div class="side-deco" id="deco-r">
+      <span class="bs"></span><span class="bl"></span>
+      <span class="bs"></span><span class="bs"></span>
+      <span class="bl"></span><span class="bs"></span>
+    </div>
+
+    <div id="hud-top">
+      <div id="hud-name">—</div>
+      <div id="hud-meta">
+        <span id="hud-type">UNKNOWN</span>
+        <span id="hud-id">ID: 0000</span>
+      </div>
+    </div>
+
+    <div id="stage-wrap">
+      <div id="stage-bg"></div>
+      <canvas id="stage-canvas"></canvas>
+      <div id="stage-dom"></div>
+      <div id="stage-vignette"></div>
+      <div id="stage-empty">
+        <svg class="se-icon" width="60" height="60" viewBox="0 0 60 60" fill="none">
+          <circle cx="30" cy="24" r="11" stroke="#c8a96e" stroke-width="1"/>
+          <path d="M10 52 Q30 38 50 52" stroke="#c8a96e" stroke-width="1" fill="none"/>
+          <rect x="4" y="4" width="52" height="52" stroke="#c8a96e" stroke-width="0.5" opacity="0.4"/>
+        </svg>
+        <div class="se-text">NO CHARACTER<br>LOADED</div>
+      </div>
+      <div id="scan-line"></div>
+    </div>
+
+    <div id="hud-bot">
+      <div id="hud-stats">
+        <div class="stat-col" id="stat-a"></div>
+        <div class="stat-col" id="stat-b"></div>
+      </div>
+      <div id="hud-lore"></div>
+    </div>
+    <button id="save-vault-btn">⊕ Save to Vault</button>
+  </div>
+
+  <div id="inline-json-panel">
+    <div id="ijp-label">Load JSON</div>
+    <textarea id="ijp-textarea" placeholder="Paste character JSON here..."></textarea>
+    <button id="ijp-load-btn">▶ Render</button>
+    <div id="ijp-divider"></div>
+    <div id="ijp-hint">drag &amp; drop .json file<br>anywhere on screen</div>
+  </div>
+
+  <div id="scale-panel">
+    <div id="scale-label">Scale</div>
+    <button class="scale-btn active" data-scale="1">1×</button>
+    <div id="scale-divider"></div>
+    <button class="scale-btn" data-scale="0.5">½×</button>
+    <button class="scale-btn" data-scale="0.25">¼×</button>
+    <div id="scale-divider"></div>
+    <div id="scale-readout">480px</div>
+  </div>
+
+  <div id="load-ui">
+    <div id="load-mark">
+      <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+        <circle cx="15" cy="12" r="5.5" stroke="#c8a96e" stroke-width="1"/>
+        <path d="M5 26 Q15 18 25 26" stroke="#c8a96e" stroke-width="1" fill="none"/>
+        <rect x="2" y="2" width="26" height="26" stroke="#c8a96e" stroke-width="0.4" opacity="0.3"/>
+      </svg>
+    </div>
+    <div id="load-wordmark">Character Renderer</div>
+    <textarea id="load-textarea" placeholder="Paste character JSON here..."></textarea>
+    <div id="load-btn-row">
+      <button id="load-btn">Initialize</button>
+      <button id="view-chars-btn">
+        View Characters
+        <span class="vcb-badge" id="vcb-badge">0</span>
+      </button>
+    </div>
+    <div class="load-hint">
+      drag &amp; drop a .json file &nbsp;·&nbsp; ?data=&lt;url-encoded-json&gt; &nbsp;·&nbsp; postMessage API
+    </div>
+  </div>
+
+  <div id="err-bar"></div>
+
+  <script type="module" src="main.js"></script>
+</body>
+</html>
