@@ -1,8 +1,7 @@
 import { STAGE, darken, rgba, showError, executionBridge } from './helpers.js';
 import { drawShape } from './renderer.js';
-import { vaultLoad, saveToVault, renderVaultGrid, updateVaultBadge, updateVaultButtons, vault, selectedVaultId, setSelectedVaultId, vaultDeleteRecord } from './vault.js';
+import { vaultLoad, saveToVault, renderVaultGrid, vault, selectedVaultId, setSelectedVaultId, vaultDeleteRecord } from './vault.js';
 
-// Elements state references
 let stageBg, stageDom, canvas, ctx, loadUI, hudName, hudType, hudId, hudLore, statA, statB, stageEmpty;
 
 let animId = null;
@@ -42,7 +41,6 @@ export function renderCharacter(data) {
   applyHUD(data);
   buildDOM(data.dom_elements || []);
 
-  // Clears and strips dynamic styles appended by old characters
   document.querySelectorAll('.dynamic-char-style').forEach(el => el.remove());
 
   if (data.global_style) {
@@ -153,7 +151,6 @@ function loop() {
   
   if (charData.canvas_code) {
     try { 
-      // Safely pass helper function execution references to runtime evaluations
       new Function('ctx','canvas','t','size','data', 'helpers', 
         'with(helpers){' + charData.canvas_code + '}'
       )(ctx,canvas,t,STAGE,charData, executionBridge); 
@@ -195,7 +192,31 @@ function setScale(s) {
   document.getElementById('scale-readout').textContent = Math.round(STAGE * s) + 'px';
 }
 
-// Lifecycle wrapping handles DOM readiness perfectly before execution setup
+function updateVaultUIElements() {
+  const badge = document.getElementById('vcb-badge');
+  if (badge) {
+    badge.textContent = vault.length;
+    badge.classList.toggle('show', vault.length > 0);
+  }
+  
+  const active = selectedVaultId !== null;
+  const viewBtn = document.getElementById('vault-view-btn');
+  const delBtn = document.getElementById('vault-delete-btn');
+  if (viewBtn && delBtn) {
+    viewBtn.disabled = !active;
+    delBtn.disabled = !active;
+    viewBtn.classList.toggle('active', active);
+    delBtn.classList.toggle('active', active);
+  }
+}
+
+function syncVaultView() {
+  renderVaultGrid(() => {
+    updateVaultUIElements();
+  });
+  updateVaultUIElements();
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   stageBg    = document.getElementById('stage-bg');
   stageDom   = document.getElementById('stage-dom');
@@ -210,7 +231,6 @@ document.addEventListener('DOMContentLoaded', () => {
   statB      = document.getElementById('stat-b');
   stageEmpty = document.getElementById('stage-empty');
 
-  /* UI Setup and Action Binding */
   document.getElementById('load-btn').addEventListener('click', () => {
     try {
       const rawData = document.getElementById('load-textarea').value.trim();
@@ -230,7 +250,9 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('view-chars-btn').addEventListener('click', enterViewMode);
 
   document.getElementById('save-vault-btn').addEventListener('click', () => {
-    saveToVault(charData, stageBg.style.background, () => renderVaultGrid(null, updateVaultBadge), updateVaultBadge);
+    saveToVault(charData, stageBg.style.background, () => {
+      syncVaultView();
+    });
   });
 
   document.getElementById('vault-view-btn').addEventListener('click', () => {
@@ -239,8 +261,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (entry) {
       renderCharacter(JSON.parse(JSON.stringify(entry.data)));
       setSelectedVaultId(null);
-      updateVaultButtons();
-      renderVaultGrid(() => renderVaultGrid(null, updateVaultBadge), updateVaultBadge);
+      syncVaultView();
     }
   });
 
@@ -253,8 +274,7 @@ document.addEventListener('DOMContentLoaded', () => {
         await vaultDeleteRecord(idToDelete);
         vault.splice(idx, 1);
         setSelectedVaultId(null);
-        renderVaultGrid(() => renderVaultGrid(null, updateVaultBadge), updateVaultBadge);
-        updateVaultBadge();
+        syncVaultView();
       } catch (err) {
         showError('Delete failed: ' + err.message);
       }
@@ -267,7 +287,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  /* Drag and Drop Routing Handlers */
   ['dragenter','dragover'].forEach(e => document.addEventListener(e, ev => { ev.preventDefault(); document.body.classList.add('drag-over'); }));
   ['dragleave','drop'].forEach(e => document.addEventListener(e, ev => { ev.preventDefault(); document.body.classList.remove('drag-over'); }));
 
@@ -278,7 +297,6 @@ document.addEventListener('DOMContentLoaded', () => {
     r.readAsText(f);
   });
 
-  /* Cross Window postMessage API configurations */
   const qp = new URLSearchParams(window.location.search);
   if (qp.has('data')) { try { renderCharacter(JSON.parse(decodeURIComponent(qp.get('data')))); } catch(e) { showError('URL: ' + e.message); } }
 
@@ -289,6 +307,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Safe initiation of local storage state profiles inside DB setups
-  vaultLoad(() => renderVaultGrid(null, updateVaultBadge), updateVaultBadge);
+  vaultLoad(() => {
+    syncVaultView();
+  });
 });
