@@ -1,5 +1,5 @@
 import { STAGE, darken, rgba, showError } from './helpers.js';
-import { drawShape, pState } from './renderer.js';
+import { drawShape } from './renderer.js';
 import { vaultLoad, saveToVault, renderVaultGrid, updateVaultBadge, updateVaultButtons, vault, selectedVaultId, setSelectedVaultId, vaultSave } from './vault.js';
 
 const stageBg    = document.getElementById('stage-bg');
@@ -26,7 +26,8 @@ const STAT_PALETTE = {
   vit:'#77cc66', str:'#dd7744', int:'#6688dd', agi:'#55bb99',
 };
 
-function renderCharacter(data) {
+// Exporting so that module operations, drag-and-drop, and window messages link up properly
+export function renderCharacter(data) {
   charData = data;
   if (animId) cancelAnimationFrame(animId);
   globalT = 0;
@@ -35,7 +36,7 @@ function renderCharacter(data) {
   ctx.clearRect(0, 0, STAGE, STAGE);
 
   loadUI.classList.add('hidden');
-  setTimeout(() => loadUI.style.display = 'none', 420);
+  setTimeout(() => { loadUI.style.display = 'none'; }, 420);
   stageEmpty.style.display = 'none';
 
   document.getElementById('scale-panel').classList.add('visible');
@@ -63,7 +64,7 @@ function renderCharacter(data) {
 
 function enterViewMode() {
   loadUI.classList.add('hidden');
-  setTimeout(() => loadUI.style.display = 'none', 420);
+  setTimeout(() => { loadUI.style.display = 'none'; }, 420);
 
   document.getElementById('scale-panel').classList.add('visible');
   document.getElementById('vault-panel').classList.add('visible');
@@ -178,8 +179,10 @@ function setScale(s) {
   const tx      = `translate(${offset}px, ${offset}px) scale(${s})`;
   
   [stageEl, domEl, vigEl].forEach(el => {
-    el.style.transformOrigin = 'top left';
-    el.style.transform = s === 1 ? '' : tx;
+    if (el) {
+      el.style.transformOrigin = 'top left';
+      el.style.transform = s === 1 ? '' : tx;
+    }
   });
   document.querySelectorAll('.scale-btn').forEach(b => {
     b.classList.toggle('active', parseFloat(b.dataset.scale) === s);
@@ -187,23 +190,27 @@ function setScale(s) {
   document.getElementById('scale-readout').textContent = Math.round(STAGE * s) + 'px';
 }
 
-/* Event Binding Hookups */
+/* UI Controls Event Configuration */
 document.getElementById('load-btn').addEventListener('click', () => {
   try {
-    renderCharacter(JSON.parse(document.getElementById('load-textarea').value.trim()));
+    const rawData = document.getElementById('load-textarea').value.trim();
+    if (!rawData) return;
+    renderCharacter(JSON.parse(rawData));
   } catch(e) { showError('JSON error: ' + e.message); }
 });
 
 document.getElementById('ijp-load-btn').addEventListener('click', () => {
   try {
-    renderCharacter(JSON.parse(document.getElementById('ijp-textarea').value.trim()));
+    const rawData = document.getElementById('ijp-textarea').value.trim();
+    if (!rawData) return;
+    renderCharacter(JSON.parse(rawData));
   } catch(e) { showError('JSON error: ' + e.message); }
 });
 
 document.getElementById('view-chars-btn').addEventListener('click', enterViewMode);
 
 document.getElementById('save-vault-btn').addEventListener('click', () => {
-  saveToVault(charData, stageBg.style.background, renderVaultGrid, updateVaultBadge);
+  saveToVault(charData, stageBg.style.background, () => renderVaultGrid(null, updateVaultBadge), updateVaultBadge);
 });
 
 document.getElementById('vault-view-btn').addEventListener('click', () => {
@@ -213,7 +220,7 @@ document.getElementById('vault-view-btn').addEventListener('click', () => {
     renderCharacter(JSON.parse(JSON.stringify(entry.data)));
     setSelectedVaultId(null);
     updateVaultButtons();
-    renderVaultGrid();
+    renderVaultGrid(() => renderVaultGrid(null, updateVaultBadge), updateVaultBadge);
   }
 });
 
@@ -223,7 +230,7 @@ document.getElementById('vault-delete-btn').addEventListener('click', () => {
   if (idx !== -1) vault.splice(idx, 1);
   setSelectedVaultId(null);
   vaultSave();
-  renderVaultGrid();
+  renderVaultGrid(() => renderVaultGrid(null, updateVaultBadge), updateVaultBadge);
   updateVaultBadge();
 });
 
@@ -233,7 +240,7 @@ document.querySelectorAll('.scale-btn').forEach(btn => {
   });
 });
 
-/* Window Event Triggers */
+/* Drag and Drop Handlers */
 ['dragenter','dragover'].forEach(e => document.addEventListener(e, ev => { ev.preventDefault(); document.body.classList.add('drag-over'); }));
 ['dragleave','drop'].forEach(e => document.addEventListener(e, ev => { ev.preventDefault(); document.body.classList.remove('drag-over'); }));
 
@@ -244,6 +251,7 @@ document.addEventListener('drop', e => {
   r.readAsText(f);
 });
 
+/* Context Parameters and Cross-Window Communications */
 const qp = new URLSearchParams(window.location.search);
 if (qp.has('data')) { try { renderCharacter(JSON.parse(decodeURIComponent(qp.get('data')))); } catch(e) { showError('URL: ' + e.message); } }
 
@@ -254,5 +262,5 @@ window.addEventListener('message', e => {
   }
 });
 
-/* Boot Execution */
-vaultLoad();
+/* Initialize Vault System state on window setup */
+vaultLoad(() => renderVaultGrid(null, updateVaultBadge), updateVaultBadge);
