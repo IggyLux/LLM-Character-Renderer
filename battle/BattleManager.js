@@ -110,7 +110,7 @@ export class BattleManager {
   }
 
   drawCharacter(entity) {
-    const size = 96;   // was 56 – larger, less pixelated
+    const size = 120;   // was 56 – larger, less pixelated
     const offCanvas = document.createElement('canvas');
     offCanvas.width = offCanvas.height = 120;
     renderMiniCharacter(entity.data, offCanvas);
