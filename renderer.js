@@ -124,18 +124,19 @@ function drawParticles(ctx, s) {
 
 export function renderMiniCharacter(data, targetCanvas) {
   const mCtx = targetCanvas.getContext('2d');
+  targetCanvas.width = 120;          // force size
+  targetCanvas.height = 120;
+  mCtx.clearRect(0, 0, 120, 120);    // clear previous content
   const scale = 120 / STAGE;
-  mCtx.clearRect(0, 0, 120, 120);
-  
   mCtx.save();
   mCtx.scale(scale, scale);
   (data.canvas_shapes || []).forEach(s => drawShape(mCtx, targetCanvas, s, 0));
   if (data.canvas_code) {
     try { 
-      new Function('ctx', 'canvas', 't', 'size', 'data', 'helpers', 
+      new Function('ctx','canvas','t','size','data', 'helpers', 
         'with(helpers){' + data.canvas_code + '}'
       )(mCtx, targetCanvas, 0, STAGE, data, executionBridge); 
-    } catch (e) {}
+    } catch(e) {}
   }
   mCtx.restore();
 }
