@@ -9,7 +9,6 @@ export function setSelectedVaultId(id) {
   selectedVaultId = id;
 }
 
-// Initialize database connection safely
 export function initDB() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open('CharacterRendererDB', 1);
@@ -30,7 +29,7 @@ export function initDB() {
   });
 }
 
-export async function vaultLoad(onGridRender, onBadgeUpdate) {
+export async function vaultLoad(onUpdateCallback) {
   if (!db) await initDB();
   const tx = db.transaction('characters', 'readonly');
   const store = tx.objectStore('characters');
@@ -38,8 +37,7 @@ export async function vaultLoad(onGridRender, onBadgeUpdate) {
 
   getAllReq.onsuccess = () => {
     vault = getAllReq.result || [];
-    renderVaultGrid(onGridRender, onBadgeUpdate);
-    updateVaultBadge(onBadgeUpdate);
+    if (onUpdateCallback) onUpdateCallback();
   };
 }
 
@@ -63,7 +61,6 @@ export function vaultDeleteRecord(id) {
   });
 }
 
-// Scrapes and safely waits for character visuals before painting
 function preloadCharacterImages(data) {
   const urls = [];
   (data.canvas_shapes || []).forEach(s => { if (s.type === 'image' && s.src) urls.push(s.src); });
@@ -79,7 +76,7 @@ function preloadCharacterImages(data) {
   }));
 }
 
-export async function saveToVault(charData, bgStyle, onGridRender, onBadgeUpdate) {
+export async function saveToVault(charData, bgStyle, onUpdateCallback) {
   if (!charData) return;
   const newId = Date.now();
   const entry = { id: newId, data: JSON.parse(JSON.stringify(charData)), bgStyle };
@@ -87,8 +84,8 @@ export async function saveToVault(charData, bgStyle, onGridRender, onBadgeUpdate
   try {
     await vaultSaveRecord(entry);
     vault.push(entry);
-    renderVaultGrid(onGridRender, onBadgeUpdate);
-    updateVaultBadge(onBadgeUpdate);
+    
+    if (onUpdateCallback) onUpdateCallback();
 
     const btn = document.getElementById('save-vault-btn');
     if (btn) {
@@ -104,7 +101,7 @@ export async function saveToVault(charData, bgStyle, onGridRender, onBadgeUpdate
   }
 }
 
-export function renderVaultGrid(onGridRender, onBadgeUpdate) {
+export function renderVaultGrid(onCardSelectCallback) {
   const grid = document.getElementById('vault-grid');
   const countEl = document.getElementById('vault-count');
   if (!grid || !countEl) return;
@@ -127,7 +124,6 @@ export function renderVaultGrid(onGridRender, onBadgeUpdate) {
     miniCanvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;';
     card.appendChild(miniCanvas);
     
-    // Ensure imagery files complete loading state ahead of drawing card profiles
     preloadCharacterImages(entry.data).then(() => {
       renderMiniCharacter(entry.data, miniCanvas);
     });
@@ -142,30 +138,8 @@ export function renderVaultGrid(onGridRender, onBadgeUpdate) {
       document.querySelectorAll('.vault-card').forEach(c => {
         c.classList.toggle('selected', Number(c.dataset.id) === selectedVaultId);
       });
-      updateVaultButtons();
+      if (onCardSelectCallback) onCardSelectCallback();
     });
     grid.appendChild(card);
   });
-
-  updateVaultButtons();
-}
-
-export function updateVaultButtons() {
-  const active = selectedVaultId !== null;
-  const viewBtn = document.getElementById('vault-view-btn');
-  const delBtn = document.getElementById('vault-delete-btn');
-  if (viewBtn && delBtn) {
-    viewBtn.disabled = !active;
-    delBtn.disabled = !active;
-    viewBtn.classList.toggle('active', active);
-    delBtn.classList.toggle('active', active);
-  }
-}
-
-export function updateVaultBadge(onBadgeUpdate) {
-  const badge = document.getElementById('vcb-badge');
-  if (!badge) return;
-  badge.textContent = vault.length;
-  badge.classList.toggle('show', vault.length > 0);
-  if (onBadgeUpdate) onBadgeUpdate(vault.length);
 }
