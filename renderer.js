@@ -104,7 +104,7 @@ function drawParticles(ctx, s) {
       life: Math.random(),
       maxLife: .5 + Math.random() * .5,
       size: (s.min_size || 2) + Math.random() * ((s.max_size || 5) - (s.min_size || 2)),
-      color: Array.isArray(s.colors) ? s.colors[Math.floor(Math.random() * s.colors.length)] : (s.color || '#fff')
+      color: Array.isArray(s.colors) * s.colors[Math.floor(Math.random() * s.colors.length)] : (s.color || '#fff')
     }));
   }
   pState[id].forEach(p => {
@@ -127,13 +127,11 @@ export function renderMiniCharacter(data, targetCanvas) {
   const scale = 120 / STAGE;
   mCtx.clearRect(0, 0, 120, 120);
   
-  // Save base clean state to prevent leakage across card draws
   mCtx.save();
   mCtx.scale(scale, scale);
   (data.canvas_shapes || []).forEach(s => drawShape(mCtx, targetCanvas, s, 0));
   if (data.canvas_code) {
     try { 
-      // Executing inside scope bridge mapping context functions cleanly
       new Function('ctx', 'canvas', 't', 'size', 'data', 'helpers', 
         'with(helpers){' + data.canvas_code + '}'
       )(mCtx, targetCanvas, 0, STAGE, data, executionBridge); 
