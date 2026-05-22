@@ -4,9 +4,10 @@ export const imgCache = {};
 
 export function showError(msg) {
   const errBar = document.getElementById('err-bar');
+  if (!errBar) return;
   errBar.textContent = '⚠ ' + msg;
   errBar.style.display = 'block';
-  setTimeout(() => errBar.style.display = 'none', 7000);
+  setTimeout(() => { errBar.style.display = 'none'; }, 7000);
 }
 
 export function ev(v, t) {
