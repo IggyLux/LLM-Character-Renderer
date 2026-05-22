@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Character Renderer</title>
+  <title>Character Renderer + Arena</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -11,6 +11,7 @@
   <div id="page-bg"></div>
   <div id="page-grid"></div>
 
+  <!-- Original Vault Panel -->
   <div id="vault-panel">
     <div id="vault-inner">
       <div id="vault-header">
@@ -27,6 +28,7 @@
     </div>
   </div>
 
+  <!-- Original Character Frame -->
   <div id="frame">
     <div class="side-deco" id="deco-l">
       <span class="bs"></span><span class="bl"></span>
@@ -73,6 +75,37 @@
     <button id="save-vault-btn">⊕ Save to Vault</button>
   </div>
 
+  <!-- Arena Mode Controls (initially hidden) -->
+  <div id="arena-controls">
+    <button id="enter-arena-btn">⚔ ENTER ARENA</button>
+    <button id="exit-arena-btn" style="display: none;">✕ EXIT ARENA</button>
+  </div>
+
+  <!-- Arena View (hidden by default) -->
+  <div id="arena-view" style="display: none;">
+    <div id="arena-header">
+      <span id="arena-title">AUTO BATTLE ARENA</span>
+      <span id="arena-status">SELECT CHARACTERS</span>
+    </div>
+    <div id="arena-container">
+      <canvas id="arena-canvas" width="1000" height="600"></canvas>
+      <div id="arena-sidebar">
+        <div class="arena-section">
+          <h4>YOUR CHAMPION</h4>
+          <div id="player-character-list" class="arena-char-list"></div>
+        </div>
+        <div class="arena-section">
+          <h4>NPC OPPONENTS (2–5)</h4>
+          <div id="npc-character-list" class="arena-char-list"></div>
+          <button id="add-random-npc" class="arena-btn-small">+ Random from Vault</button>
+        </div>
+        <button id="start-battle-btn" class="arena-btn" disabled>START BATTLE</button>
+        <div id="battle-log"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Existing UI panels -->
   <div id="inline-json-panel">
     <div id="ijp-label">Load JSON</div>
     <textarea id="ijp-textarea" placeholder="Paste character JSON here..."></textarea>
@@ -109,7 +142,7 @@
       </button>
     </div>
     <div class="load-hint">
-      drag &amp; drop a .json file &nbsp;·&nbsp; ?data=&lt;url-encoded-json&gt; &nbsp;·&nbsp; postMessage API
+      drag &amp; drop a .json file &nbsp;·&nbsp; ?data=<url-encoded-json> &nbsp;·&nbsp; postMessage API
     </div>
   </div>
 

@@ -80,4 +80,12 @@ export function darken(hex, amt) {
 
 export const executionBridge = {
   ev, evc, buildGrad, rRect, hex2rgb, rgba, darken, STAGE, imgCache
+}
+
+export function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
+export function randomInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
 };
