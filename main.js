@@ -1,19 +1,9 @@
-import { STAGE, darken, rgba, showError } from './helpers.js';
+import { STAGE, darken, rgba, showError, executionBridge } from './helpers.js';
 import { drawShape } from './renderer.js';
-import { vaultLoad, saveToVault, renderVaultGrid, updateVaultBadge, updateVaultButtons, vault, selectedVaultId, setSelectedVaultId, vaultSave } from './vault.js';
+import { vaultLoad, saveToVault, renderVaultGrid, updateVaultBadge, updateVaultButtons, vault, selectedVaultId, setSelectedVaultId, vaultDeleteRecord } from './vault.js';
 
-const stageBg    = document.getElementById('stage-bg');
-const stageDom   = document.getElementById('stage-dom');
-const canvas     = document.getElementById('stage-canvas');
-const ctx        = canvas.getContext('2d');
-const loadUI     = document.getElementById('load-ui');
-const hudName    = document.getElementById('hud-name');
-const hudType    = document.getElementById('hud-type');
-const hudId      = document.getElementById('hud-id');
-const hudLore    = document.getElementById('hud-lore');
-const statA      = document.getElementById('stat-a');
-const statB      = document.getElementById('stat-b');
-const stageEmpty = document.getElementById('stage-empty');
+// Elements state references
+let stageBg, stageDom, canvas, ctx, loadUI, hudName, hudType, hudId, hudLore, statA, statB, stageEmpty;
 
 let animId = null;
 let globalT = 0;
@@ -26,7 +16,6 @@ const STAT_PALETTE = {
   vit:'#77cc66', str:'#dd7744', int:'#6688dd', agi:'#55bb99',
 };
 
-// Exporting so that module operations, drag-and-drop, and window messages link up properly
 export function renderCharacter(data) {
   charData = data;
   if (animId) cancelAnimationFrame(animId);
@@ -53,8 +42,12 @@ export function renderCharacter(data) {
   applyHUD(data);
   buildDOM(data.dom_elements || []);
 
+  // Clears and strips dynamic styles appended by old characters
+  document.querySelectorAll('.dynamic-char-style').forEach(el => el.remove());
+
   if (data.global_style) {
     const s = document.createElement('style');
+    s.className = 'dynamic-char-style';
     s.textContent = data.global_style;
     document.head.appendChild(s);
   }
@@ -144,6 +137,7 @@ function buildDOM(elements) {
     if (el.css_animation) {
       const n = `ka${i}_${Date.now()}`;
       const s = document.createElement('style');
+      s.className = 'dynamic-char-style';
       s.textContent = `@keyframes ${n}{${el.css_animation.keyframes||''}}`;
       document.head.appendChild(s);
       div.style.animation = `${n} ${el.css_animation.duration||'1s'} ${el.css_animation.timing||'ease-in-out'} ${el.css_animation.delay||'0s'} ${el.css_animation.iteration||'infinite'}`;
@@ -155,15 +149,26 @@ function buildDOM(elements) {
 function loop() {
   ctx.clearRect(0, 0, STAGE, STAGE);
   const t = globalT;
-  (charData.canvas_shapes || []).forEach(s => drawShape(ctx, canvas, s, t, charData));
+  (charData.canvas_shapes || []).forEach(s => drawShape(ctx, canvas, s, t));
+  
   if (charData.canvas_code) {
-    try { new Function('ctx','canvas','t','size','data',charData.canvas_code)(ctx,canvas,t,STAGE,charData); }
+    try { 
+      // Safely pass helper function execution references to runtime evaluations
+      new Function('ctx','canvas','t','size','data', 'helpers', 
+        'with(helpers){' + charData.canvas_code + '}'
+      )(ctx,canvas,t,STAGE,charData, executionBridge); 
+    }
     catch(e) { showError('canvas_code: '+e.message); }
   }
+  
   (charData.dom_animations || []).forEach(a => {
     try {
       const el = document.getElementById(a.target);
-      if (el) new Function('el','t','data',a.code)(el,t,charData);
+      if (el) {
+        new Function('el','t','data', 'helpers',
+          'with(helpers){' + a.code + '}'
+        )(el,t,charData, executionBridge);
+      }
     } catch(e) { showError('dom_animation: '+e.message); }
   });
   globalT += (charData.scene?.speed || 0.018);
@@ -176,7 +181,7 @@ function setScale(s) {
   const domEl   = document.getElementById('stage-dom');
   const vigEl   = document.getElementById('stage-vignette');
   const offset  = (STAGE - STAGE * s) / 2;
-  const tx      = `translate(${offset}px, ${offset}px) scale(${s})`;
+  const tx = `translate(${offset}px, ${offset}px) scale(${s})`;
   
   [stageEl, domEl, vigEl].forEach(el => {
     if (el) {
@@ -190,77 +195,100 @@ function setScale(s) {
   document.getElementById('scale-readout').textContent = Math.round(STAGE * s) + 'px';
 }
 
-/* UI Controls Event Configuration */
-document.getElementById('load-btn').addEventListener('click', () => {
-  try {
-    const rawData = document.getElementById('load-textarea').value.trim();
-    if (!rawData) return;
-    renderCharacter(JSON.parse(rawData));
-  } catch(e) { showError('JSON error: ' + e.message); }
-});
+// Lifecycle wrapping handles DOM readiness perfectly before execution setup
+document.addEventListener('DOMContentLoaded', () => {
+  stageBg    = document.getElementById('stage-bg');
+  stageDom   = document.getElementById('stage-dom');
+  canvas     = document.getElementById('stage-canvas');
+  ctx        = canvas.getContext('2d');
+  loadUI     = document.getElementById('load-ui');
+  hudName    = document.getElementById('hud-name');
+  hudType    = document.getElementById('hud-type');
+  hudId      = document.getElementById('hud-id');
+  hudLore    = document.getElementById('hud-lore');
+  statA      = document.getElementById('stat-a');
+  statB      = document.getElementById('stat-b');
+  stageEmpty = document.getElementById('stage-empty');
 
-document.getElementById('ijp-load-btn').addEventListener('click', () => {
-  try {
-    const rawData = document.getElementById('ijp-textarea').value.trim();
-    if (!rawData) return;
-    renderCharacter(JSON.parse(rawData));
-  } catch(e) { showError('JSON error: ' + e.message); }
-});
-
-document.getElementById('view-chars-btn').addEventListener('click', enterViewMode);
-
-document.getElementById('save-vault-btn').addEventListener('click', () => {
-  saveToVault(charData, stageBg.style.background, () => renderVaultGrid(null, updateVaultBadge), updateVaultBadge);
-});
-
-document.getElementById('vault-view-btn').addEventListener('click', () => {
-  if (!selectedVaultId) return;
-  const entry = vault.find(v => v.id === selectedVaultId);
-  if (entry) {
-    renderCharacter(JSON.parse(JSON.stringify(entry.data)));
-    setSelectedVaultId(null);
-    updateVaultButtons();
-    renderVaultGrid(() => renderVaultGrid(null, updateVaultBadge), updateVaultBadge);
-  }
-});
-
-document.getElementById('vault-delete-btn').addEventListener('click', () => {
-  if (!selectedVaultId) return;
-  const idx = vault.findIndex(v => v.id === selectedVaultId);
-  if (idx !== -1) vault.splice(idx, 1);
-  setSelectedVaultId(null);
-  vaultSave();
-  renderVaultGrid(() => renderVaultGrid(null, updateVaultBadge), updateVaultBadge);
-  updateVaultBadge();
-});
-
-document.querySelectorAll('.scale-btn').forEach(btn => {
-  btn.addEventListener('click', (e) => {
-    setScale(parseFloat(e.target.dataset.scale));
+  /* UI Setup and Action Binding */
+  document.getElementById('load-btn').addEventListener('click', () => {
+    try {
+      const rawData = document.getElementById('load-textarea').value.trim();
+      if (!rawData) return;
+      renderCharacter(JSON.parse(rawData));
+    } catch(e) { showError('JSON error: ' + e.message); }
   });
+
+  document.getElementById('ijp-load-btn').addEventListener('click', () => {
+    try {
+      const rawData = document.getElementById('ijp-textarea').value.trim();
+      if (!rawData) return;
+      renderCharacter(JSON.parse(rawData));
+    } catch(e) { showError('JSON error: ' + e.message); }
+  });
+
+  document.getElementById('view-chars-btn').addEventListener('click', enterViewMode);
+
+  document.getElementById('save-vault-btn').addEventListener('click', () => {
+    saveToVault(charData, stageBg.style.background, () => renderVaultGrid(null, updateVaultBadge), updateVaultBadge);
+  });
+
+  document.getElementById('vault-view-btn').addEventListener('click', () => {
+    if (!selectedVaultId) return;
+    const entry = vault.find(v => v.id === selectedVaultId);
+    if (entry) {
+      renderCharacter(JSON.parse(JSON.stringify(entry.data)));
+      setSelectedVaultId(null);
+      updateVaultButtons();
+      renderVaultGrid(() => renderVaultGrid(null, updateVaultBadge), updateVaultBadge);
+    }
+  });
+
+  document.getElementById('vault-delete-btn').addEventListener('click', async () => {
+    if (!selectedVaultId) return;
+    const idToDelete = selectedVaultId;
+    const idx = vault.findIndex(v => v.id === idToDelete);
+    if (idx !== -1) {
+      try {
+        await vaultDeleteRecord(idToDelete);
+        vault.splice(idx, 1);
+        setSelectedVaultId(null);
+        renderVaultGrid(() => renderVaultGrid(null, updateVaultBadge), updateVaultBadge);
+        updateVaultBadge();
+      } catch (err) {
+        showError('Delete failed: ' + err.message);
+      }
+    }
+  });
+
+  document.querySelectorAll('.scale-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      setScale(parseFloat(e.target.dataset.scale));
+    });
+  });
+
+  /* Drag and Drop Routing Handlers */
+  ['dragenter','dragover'].forEach(e => document.addEventListener(e, ev => { ev.preventDefault(); document.body.classList.add('drag-over'); }));
+  ['dragleave','drop'].forEach(e => document.addEventListener(e, ev => { ev.preventDefault(); document.body.classList.remove('drag-over'); }));
+
+  document.addEventListener('drop', e => {
+    const f = e.dataTransfer.files[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = ev => { try { renderCharacter(JSON.parse(ev.target.result)); } catch(err) { showError('File: ' + err.message); } };
+    r.readAsText(f);
+  });
+
+  /* Cross Window postMessage API configurations */
+  const qp = new URLSearchParams(window.location.search);
+  if (qp.has('data')) { try { renderCharacter(JSON.parse(decodeURIComponent(qp.get('data')))); } catch(e) { showError('URL: ' + e.message); } }
+
+  window.addEventListener('message', e => {
+    if (e.data && e.data.type === 'RENDER_CHARACTER') {
+      try { renderCharacter(typeof e.data.payload === 'string' ? JSON.parse(e.data.payload) : e.data.payload); }
+      catch(err) { showError('postMessage: ' + err.message); }
+    }
+  });
+
+  // Safe initiation of local storage state profiles inside DB setups
+  vaultLoad(() => renderVaultGrid(null, updateVaultBadge), updateVaultBadge);
 });
-
-/* Drag and Drop Handlers */
-['dragenter','dragover'].forEach(e => document.addEventListener(e, ev => { ev.preventDefault(); document.body.classList.add('drag-over'); }));
-['dragleave','drop'].forEach(e => document.addEventListener(e, ev => { ev.preventDefault(); document.body.classList.remove('drag-over'); }));
-
-document.addEventListener('drop', e => {
-  const f = e.dataTransfer.files[0]; if (!f) return;
-  const r = new FileReader();
-  r.onload = ev => { try { renderCharacter(JSON.parse(ev.target.result)); } catch(err) { showError('File: ' + err.message); } };
-  r.readAsText(f);
-});
-
-/* Context Parameters and Cross-Window Communications */
-const qp = new URLSearchParams(window.location.search);
-if (qp.has('data')) { try { renderCharacter(JSON.parse(decodeURIComponent(qp.get('data')))); } catch(e) { showError('URL: ' + e.message); } }
-
-window.addEventListener('message', e => {
-  if (e.data && e.data.type === 'RENDER_CHARACTER') {
-    try { renderCharacter(typeof e.data.payload === 'string' ? JSON.parse(e.data.payload) : e.data.payload); }
-    catch(err) { showError('postMessage: ' + err.message); }
-  }
-});
-
-/* Initialize Vault System state on window setup */
-vaultLoad(() => renderVaultGrid(null, updateVaultBadge), updateVaultBadge);
