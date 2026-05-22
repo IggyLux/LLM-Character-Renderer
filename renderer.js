@@ -124,7 +124,7 @@ function drawParticles(ctx, s) {
 
 export function renderMiniCharacter(data, targetCanvas) {
   const mCtx = targetCanvas.getContext('2d');
-  const scale = 120 / STAGE; // VAULT_SIZE = 120
+  const scale = 120 / STAGE;
   mCtx.clearRect(0, 0, 120, 120);
   mCtx.save();
   mCtx.scale(scale, scale);
@@ -156,7 +156,7 @@ function drawShapeMini(mCtx, s, t) {
     case 'polygon': mCtx.beginPath(); (s.points || []).forEach(([px, py], i) => i === 0 ? mCtx.moveTo(ev(px, t), ev(py, t)) : mCtx.lineTo(ev(px, t), ev(py, t))); if (s.closed !== false) mCtx.closePath(); if (fill) mCtx.fill(); if (stroke) mCtx.stroke(); break;
     case 'arc': mCtx.beginPath(); mCtx.arc(0, 0, ev(s.radius, t), (ev(s.start_angle, t) || 0) * Math.PI / 180, (ev(s.end_angle, t) || 360) * Math.PI / 180, false); if (fill) mCtx.fill(); if (stroke) mCtx.stroke(); break;
     case 'line': mCtx.beginPath(); mCtx.moveTo(ev(s.x1, t), ev(s.y1, t)); mCtx.lineTo(ev(s.x2, t), ev(s.y2, t)); if (stroke) mCtx.stroke(); break;
-    case 'text': { const fs = ev(s.font_size, t) || 24; mCtx.font = `${s.font_style || ''} ${fs}px ${s.font_family || 'monospace'}`; mCtx.textAlign = s.align || 'center'; mCtx.textBaseline = s.baseline || 'middle'; if (fill) mCtx.fillText(s.text || '', 0, 0); break; }
+    case 'text': { const fs = ev(s.font_size, t) || 24; mCtx.font = `${s.font_style || ''} ${fs}px ${s.font_family || 'monospace'}`; mCtx.textAlign = s.align || 'center'; mCtx.textBaseline = mCtx.baseline || 'middle'; if (fill) mCtx.fillText(s.text || '', 0, 0); break; }
     case 'path': { const p2 = new Path2D(s.d || ''); if (fill) mCtx.fill(p2); if (stroke) mCtx.stroke(p2); break; }
   }
   mCtx.restore();
