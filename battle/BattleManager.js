@@ -110,10 +110,11 @@ export class BattleManager {
   }
 
   drawCharacter(entity) {
-    const size = 56;
+    const size = 96;   // was 56 – larger, less pixelated
     const offCanvas = document.createElement('canvas');
     offCanvas.width = offCanvas.height = 120;
     renderMiniCharacter(entity.data, offCanvas);
+    this.ctx.imageSmoothingEnabled = false;   // optional: crisp edges
     this.ctx.drawImage(offCanvas, entity.pos.x - size/2, entity.pos.y - size/2, size, size);
     // Highlight player with a subtle ring
     if (entity.isPlayer) {
