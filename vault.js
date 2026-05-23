@@ -6,6 +6,7 @@ export let selectedVaultId = null;
 
 const STORAGE_KEY = 'character_vault';
 
+// Load from localStorage
 export function vaultLoad(callback) {
   const stored = localStorage.getItem(STORAGE_KEY);
   if (stored) {
@@ -16,6 +17,7 @@ export function vaultLoad(callback) {
   renderVaultGrid(callback);
 }
 
+// Save a new character
 export function saveToVault(charData, bgStyle, callback) {
   if (!charData) return;
   const id = Date.now();
@@ -30,6 +32,23 @@ export function saveToVault(charData, bgStyle, callback) {
   }
 }
 
+// Delete a vault entry by id
+export function deleteVaultEntry(id) {
+  vault = vault.filter(entry => entry.id !== id);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(vault));
+  if (selectedVaultId === id) {
+    selectedVaultId = null;
+  }
+  renderVaultGrid(); // re-render after deletion
+}
+
+// Get the currently selected vault entry (for view button)
+export function getSelectedEntry() {
+  if (!selectedVaultId) return null;
+  return vault.find(entry => entry.id === selectedVaultId) || null;
+}
+
+// Render the vault grid
 export function renderVaultGrid(callback) {
   const grid = document.getElementById('vault-grid');
   if (!grid) return;
@@ -57,20 +76,15 @@ export function renderVaultGrid(callback) {
     card.addEventListener('click', (e) => {
       e.stopPropagation();
       selectedVaultId = entry.id;
-      renderVaultGrid(callback);
+      renderVaultGrid(callback); // re-render to show selection highlight
     });
     grid.appendChild(card);
   });
   if (callback) callback();
 }
 
+// Manually set selected id and re-render
 export function setSelectedVaultId(id) {
   selectedVaultId = id;
-  renderVaultGrid(() => {});
-}
-
-export async function vaultDeleteRecord(id) {
-  vault = vault.filter(v => v.id !== id);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(vault));
-  if (selectedVaultId === id) selectedVaultId = null;
+  renderVaultGrid();
 }
