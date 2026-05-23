@@ -13,6 +13,17 @@ export function initArena() {
   document.getElementById('add-random-npc').addEventListener('click', addRandomNPC);
   document.getElementById('start-battle-btn').addEventListener('click', startBattle);
   populateCharacterLists();
+
+  // Resize canvas buffer to match display size when window resizes
+  window.addEventListener('resize', () => {
+    if (battleManager && battleManager.isRunning) {
+      const rect = arenaCanvas.getBoundingClientRect();
+      arenaCanvas.width = rect.width;
+      arenaCanvas.height = rect.height;
+      battleManager.width = rect.width;
+      battleManager.height = rect.height;
+    }
+  });
 }
 
 export function showArena() {
@@ -70,8 +81,8 @@ function createCharacterItem(char, isPlayer) {
   const div = document.createElement('div');
   div.className = 'arena-char-item';
   const thumbCanvas = document.createElement('canvas');
-  thumbCanvas.width = 40;
-  thumbCanvas.height = 40;
+  thumbCanvas.width = 56;
+  thumbCanvas.height = 56;
   thumbCanvas.className = 'arena-char-thumb';
   renderMiniCharacter(char, thumbCanvas);
   const infoDiv = document.createElement('div');
@@ -131,7 +142,16 @@ function updateStartButton() {
 function startBattle() {
   if (!selectedPlayerChar || selectedNPCs.length < 2) return;
   if (battleManager) battleManager.stop();
-  battleManager = new BattleManager(arenaCanvas, 1000, 600);
+
+  // --- Fix pixelation: resize canvas buffer to match display size ---
+  const rect = arenaCanvas.getBoundingClientRect();
+  const displayWidth = rect.width;
+  const displayHeight = rect.height;
+  // Set canvas buffer to the exact display size (no upscaling)
+  arenaCanvas.width = displayWidth;
+  arenaCanvas.height = displayHeight;
+
+  battleManager = new BattleManager(arenaCanvas, displayWidth, displayHeight);
   battleManager.setCharacters(selectedPlayerChar, selectedNPCs);
   battleManager.start();
   document.getElementById('arena-status').textContent = 'BATTLE IN PROGRESS';
