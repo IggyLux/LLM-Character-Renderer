@@ -2,6 +2,7 @@ import { initViewer, renderCharacter, stopViewerLoop, startViewerLoop, getCurren
 import { initArena, showArena, hideArena } from './arena.js';
 import { vaultLoad } from './vault.js';
 import { showError } from './helpers.js';
+import { initViewer, updateVaultUIElements } from './viewer.js';
 
 let currentMode = 'viewer'; // 'viewer' or 'arena'
 
@@ -30,8 +31,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Load vault and then optionally load initial demo character
   vaultLoad(() => {
-    // if no character loaded, maybe load a default?
-  });
+  updateVaultUIElements();   // update badge after loading vault
+});
+
 
   // Drag & drop support
   ['dragenter','dragover'].forEach(e => document.addEventListener(e, ev => { ev.preventDefault(); document.body.classList.add('drag-over'); }));
