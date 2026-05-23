@@ -294,3 +294,4 @@ function syncVaultView() {
   });
   updateVaultUIElements();
 }
+export function updateVaultUIElements() { ... }  // (the function above)
