@@ -5,6 +5,7 @@ export let vault = [];
 export let selectedVaultId = null;
 
 const STORAGE_KEY = 'character_vault';
+const CARD_SIZE = 88;   // must match .vault-card width/height in CSS
 
 // Load from localStorage
 export function vaultLoad(callback) {
@@ -33,13 +34,13 @@ export function saveToVault(charData, bgStyle, callback) {
 }
 
 // Delete a vault entry by id
-export function deleteVaultEntry(id) {
+export function deleteVaultEntry(id, callback) {
   vault = vault.filter(entry => entry.id !== id);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(vault));
   if (selectedVaultId === id) {
     selectedVaultId = null;
   }
-  renderVaultGrid(); // re-render after deletion
+  renderVaultGrid(callback);
 }
 
 // Get the currently selected vault entry (for view button)
@@ -62,29 +63,37 @@ export function renderVaultGrid(callback) {
     const card = document.createElement('div');
     card.className = 'vault-card';
     if (selectedVaultId === entry.id) card.classList.add('selected');
+    
     const bgDiv = document.createElement('div');
     bgDiv.className = 'vault-card-bg';
+    
     const miniCanvas = document.createElement('canvas');
-    miniCanvas.width = miniCanvas.height = 120;
+    miniCanvas.width = CARD_SIZE;
+    miniCanvas.height = CARD_SIZE;
+    miniCanvas.style.width = `${CARD_SIZE}px`;
+    miniCanvas.style.height = `${CARD_SIZE}px`;
     renderMiniCharacter(entry.data, miniCanvas);
     bgDiv.appendChild(miniCanvas);
+    
     const label = document.createElement('div');
     label.className = 'vault-card-label';
     label.textContent = (entry.data.name || '???').slice(0, 12);
     card.appendChild(bgDiv);
     card.appendChild(label);
+    
     card.addEventListener('click', (e) => {
       e.stopPropagation();
       selectedVaultId = entry.id;
-      renderVaultGrid(callback);   // pass same callback to re-render
+      renderVaultGrid(callback);   // re-render and call callback to update UI
     });
+    
     grid.appendChild(card);
   });
-  if (callback) callback();   // call after rendering
+  if (callback) callback();   // important: callback runs after grid is fully rendered
 }
 
 // Manually set selected id and re-render
-export function setSelectedVaultId(id) {
+export function setSelectedVaultId(id, callback) {
   selectedVaultId = id;
-  renderVaultGrid();
+  renderVaultGrid(callback);
 }
