@@ -204,10 +204,16 @@ export function startViewerLoop() {
 }
 
 export function updateVaultUIElements() {
+  // Read actual count from localStorage to avoid binding issues
+  let count = 0;
+  try {
+    const stored = localStorage.getItem('character_vault');
+    if (stored) count = JSON.parse(stored).length;
+  } catch(e) {}
   const badge = document.getElementById('vcb-badge');
   if (badge) {
-    badge.textContent = vault.length;
-    badge.classList.toggle('show', vault.length > 0);
+    badge.textContent = count;
+    badge.classList.toggle('show', count > 0);
   }
   const viewBtn = document.getElementById('vault-view-btn');
   const delBtn = document.getElementById('vault-delete-btn');
@@ -267,13 +273,14 @@ export function initViewer() {
   });
 
   document.getElementById('vault-view-btn').addEventListener('click', () => {
-    const entry = getSelectedEntry();
-    if (entry) {
-      renderCharacter(JSON.parse(JSON.stringify(entry.data)));
-      setSelectedVaultId(null);
+  const entry = getSelectedEntry();
+  if (entry) {
+    renderCharacter(JSON.parse(JSON.stringify(entry.data)));
+    setSelectedVaultId(null, () => {
       updateVaultUIElements();
-    }
-  });
+    });
+  }
+});
 
   document.getElementById('vault-delete-btn').addEventListener('click', () => {
     if (!selectedVaultId) return;
