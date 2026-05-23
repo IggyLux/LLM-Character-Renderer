@@ -124,19 +124,22 @@ function drawParticles(ctx, s) {
 
 export function renderMiniCharacter(data, targetCanvas) {
   const mCtx = targetCanvas.getContext('2d');
-  targetCanvas.width = 120;          // force size
+  // Force canvas size and clear
+  targetCanvas.width = 120;
   targetCanvas.height = 120;
-  mCtx.clearRect(0, 0, 120, 120);    // clear previous content
+  mCtx.clearRect(0, 0, 120, 120);
+  
   const scale = 120 / STAGE;
   mCtx.save();
   mCtx.scale(scale, scale);
+  // No translate – shapes already have absolute coordinates (0..480)
   (data.canvas_shapes || []).forEach(s => drawShape(mCtx, targetCanvas, s, 0));
   if (data.canvas_code) {
-    try { 
-      new Function('ctx','canvas','t','size','data', 'helpers', 
+    try {
+      new Function('ctx', 'canvas', 't', 'size', 'data', 'helpers',
         'with(helpers){' + data.canvas_code + '}'
-      )(mCtx, targetCanvas, 0, STAGE, data, executionBridge); 
-    } catch(e) {}
+      )(mCtx, targetCanvas, 0, STAGE, data, executionBridge);
+    } catch(e) { /* ignore errors in thumbnails */ }
   }
   mCtx.restore();
 }
