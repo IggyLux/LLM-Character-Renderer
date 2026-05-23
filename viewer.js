@@ -1,6 +1,6 @@
 import { STAGE, darken, rgba, showError, executionBridge } from './helpers.js';
 import { drawShape } from './renderer.js';
-import { vault, selectedVaultId, deleteVaultEntry, getSelectedEntry, setSelectedVaultId, renderVaultGrid, saveToVault } from './vault.js';  // ADD saveToVault
+import { vault, selectedVaultId, deleteVaultEntry, getSelectedEntry, setSelectedVaultId, renderVaultGrid, saveToVault } from './vault.js';
 
 let stageBg, stageDom, canvas, ctx, loadUI, hudName, hudType, hudId, hudLore, statA, statB, stageEmpty;
 let animId = null;
@@ -203,7 +203,30 @@ export function startViewerLoop() {
   if (charData) loop();
 }
 
-// Initialization (called from main.js)
+export function updateVaultUIElements() {
+  const badge = document.getElementById('vcb-badge');
+  if (badge) {
+    badge.textContent = vault.length;
+    badge.classList.toggle('show', vault.length > 0);
+  }
+  const viewBtn = document.getElementById('vault-view-btn');
+  const delBtn = document.getElementById('vault-delete-btn');
+  const active = selectedVaultId !== null;
+  if (viewBtn && delBtn) {
+    viewBtn.disabled = !active;
+    delBtn.disabled = !active;
+    viewBtn.classList.toggle('active', active);
+    delBtn.classList.toggle('active', active);
+  }
+}
+
+function syncVaultView() {
+  renderVaultGrid(() => {
+    updateVaultUIElements();
+  });
+  updateVaultUIElements();
+}
+
 export function initViewer() {
   stageBg    = document.getElementById('stage-bg');
   stageDom   = document.getElementById('stage-dom');
@@ -234,34 +257,28 @@ export function initViewer() {
     } catch(e) { showError('JSON error: ' + e.message); }
   });
 
+  document.getElementById('view-chars-btn').addEventListener('click', enterViewMode);
+
+  document.getElementById('save-vault-btn').addEventListener('click', () => {
+    if (!charData) return;
+    saveToVault(charData, stageBg.style.background, () => {
+      updateVaultUIElements();
+    });
+  });
+
   document.getElementById('vault-view-btn').addEventListener('click', () => {
     const entry = getSelectedEntry();
     if (entry) {
       renderCharacter(JSON.parse(JSON.stringify(entry.data)));
       setSelectedVaultId(null);
-      updateVaultUIElements();   // update buttons after clearing selection
+      updateVaultUIElements();
     }
   });
-
-  document.getElementById('save-vault-btn').addEventListener('click', () => {
-    if (!charData) return;
-    saveToVault(charData, stageBg.style.background, () => {
-      updateVaultUIElements();   // update badge after save
-    });
-  });
-
-  document.getElementById('vault-view-btn').addEventListener('click', () => {
-  const entry = getSelectedEntry();
-  if (entry) {
-    renderCharacter(JSON.parse(JSON.stringify(entry.data)));
-    setSelectedVaultId(null);  // clears selection after viewing
-  }
-});
 
   document.getElementById('vault-delete-btn').addEventListener('click', () => {
     if (!selectedVaultId) return;
     deleteVaultEntry(selectedVaultId);
-    updateVaultUIElements();   // update buttons after deletion
+    updateVaultUIElements();
   });
 
   document.querySelectorAll('.scale-btn').forEach(btn => {
@@ -270,28 +287,3 @@ export function initViewer() {
     });
   });
 }
-
-ffunction updateVaultUIElements() {
-  const badge = document.getElementById('vcb-badge');
-  if (badge) {
-    badge.textContent = vault.length;
-    badge.classList.toggle('show', vault.length > 0);
-  }
-  const viewBtn = document.getElementById('vault-view-btn');
-  const delBtn = document.getElementById('vault-delete-btn');
-  const active = selectedVaultId !== null;
-  if (viewBtn && delBtn) {
-    viewBtn.disabled = !active;
-    delBtn.disabled = !active;
-    viewBtn.classList.toggle('active', active);
-    delBtn.classList.toggle('active', active);
-  }
-}
-
-function syncVaultView() {
-  renderVaultGrid(() => {
-    updateVaultUIElements();
-  });
-  updateVaultUIElements();
-}
-export function updateVaultUIElements() { ... }  // (the function above)
