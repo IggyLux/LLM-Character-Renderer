@@ -76,11 +76,11 @@ export function renderVaultGrid(callback) {
     card.addEventListener('click', (e) => {
       e.stopPropagation();
       selectedVaultId = entry.id;
-      renderVaultGrid(callback); // re-render to show selection highlight
+      renderVaultGrid(callback);   // pass same callback to re-render
     });
     grid.appendChild(card);
   });
-  if (callback) callback();
+  if (callback) callback();   // call after rendering
 }
 
 // Manually set selected id and re-render
