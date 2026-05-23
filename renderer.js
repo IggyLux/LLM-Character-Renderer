@@ -124,15 +124,13 @@ function drawParticles(ctx, s) {
 
 export function renderMiniCharacter(data, targetCanvas) {
   const mCtx = targetCanvas.getContext('2d');
-  // Force canvas size and clear
-  targetCanvas.width = 120;
-  targetCanvas.height = 120;
-  mCtx.clearRect(0, 0, 120, 120);
-  
-  const scale = 120 / STAGE;
+  const w = targetCanvas.width;
+  const h = targetCanvas.height;
+  if (!w || !h) return;
+  mCtx.clearRect(0, 0, w, h);
+  const scale = w / STAGE;
   mCtx.save();
   mCtx.scale(scale, scale);
-  // No translate – shapes already have absolute coordinates (0..480)
   (data.canvas_shapes || []).forEach(s => drawShape(mCtx, targetCanvas, s, 0));
   if (data.canvas_code) {
     try {
