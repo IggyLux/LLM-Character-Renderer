@@ -1,8 +1,7 @@
-import { initViewer, renderCharacter, stopViewerLoop, startViewerLoop, getCurrentCharacter, setScale } from './viewer.js';
+import { initViewer, renderCharacter, stopViewerLoop, startViewerLoop, getCurrentCharacter, setScale, updateVaultUIElements } from './viewer.js';
 import { initArena, showArena, hideArena } from './arena.js';
 import { vaultLoad } from './vault.js';
 import { showError } from './helpers.js';
-import { initViewer, updateVaultUIElements } from './viewer.js';
 
 let currentMode = 'viewer'; // 'viewer' or 'arena'
 
