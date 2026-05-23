@@ -21,10 +21,8 @@ export class BattleManager {
 
   setCharacters(playerChar, npcChars) {
     this.entities = [];
-    // Player spawn (left side)
     const playerEntity = new CharacterEntity(playerChar, 150, this.height/2, true);
     this.entities.push(playerEntity);
-    // NPCs spawn scattered on right side
     npcChars.forEach((npc, i) => {
       const x = this.width - 150;
       const y = 100 + (i * 100) % (this.height - 200);
@@ -51,26 +49,21 @@ export class BattleManager {
     const now = performance.now();
     let dt = Math.min(0.033, (now - this.lastTimestamp) / 1000);
     this.lastTimestamp = now;
-    
     this.update(dt);
     this.render();
-    
     this.animationId = requestAnimationFrame(() => this.loop());
   }
 
   update(dt) {
-    // Update each entity
     for (let entity of this.entities) {
       entity.update(dt, this.entities, this.width, this.height);
     }
-    // Remove dead entities
     const aliveBefore = this.entities.length;
     this.entities = this.entities.filter(e => e.isAlive);
     if (this.entities.length !== aliveBefore && this.logCallback) {
       this.logCallback(`⚰️ A warrior has fallen.`);
     }
 
-    // Determine winner
     const hasPlayer = this.entities.some(e => e.isPlayer);
     const hasNPC = this.entities.some(e => !e.isPlayer);
     if (!hasPlayer) {
@@ -88,7 +81,7 @@ export class BattleManager {
 
   render() {
     this.ctx.clearRect(0, 0, this.width, this.height);
-    // Draw ground grid
+    // Ground grid
     this.ctx.strokeStyle = "rgba(200,169,110,0.1)";
     this.ctx.lineWidth = 1;
     for (let i = 0; i < this.width; i += 50) {
@@ -102,7 +95,6 @@ export class BattleManager {
       this.ctx.stroke();
     }
 
-    // Draw each character
     for (let entity of this.entities) {
       this.drawCharacter(entity);
       this.drawHealthBar(entity);
@@ -110,35 +102,44 @@ export class BattleManager {
   }
 
   drawCharacter(entity) {
-    const size = 120;   // was 56 – larger, less pixelated
+    const finalSize = 112;          // displayed size on arena (pixels)
+    const offSize = 224;            // internal rendering resolution (2x for smoothness)
     const offCanvas = document.createElement('canvas');
-    offCanvas.width = offCanvas.height = 120;
+    offCanvas.width = offSize;
+    offCanvas.height = offSize;
     renderMiniCharacter(entity.data, offCanvas);
-    this.ctx.imageSmoothingEnabled = true;   // optional: crisp edges
-    this.ctx.drawImage(offCanvas, entity.pos.x - size/2, entity.pos.y - size/2, size, size);
-    // Highlight player with a subtle ring
+
+    this.ctx.imageSmoothingEnabled = true;
+    this.ctx.imageSmoothingQuality = 'high';
+    this.ctx.drawImage(
+      offCanvas,
+      entity.pos.x - finalSize / 2,
+      entity.pos.y - finalSize / 2,
+      finalSize,
+      finalSize
+    );
+
     if (entity.isPlayer) {
       this.ctx.beginPath();
-      this.ctx.arc(entity.pos.x, entity.pos.y, size/2 + 4, 0, Math.PI*2);
+      this.ctx.arc(entity.pos.x, entity.pos.y, finalSize / 2 + 6, 0, Math.PI * 2);
       this.ctx.strokeStyle = "#c8a96e";
-      this.ctx.lineWidth = 1.5;
+      this.ctx.lineWidth = 2;
       this.ctx.stroke();
     }
   }
 
   drawHealthBar(entity) {
     const hpPercent = entity.currentHp / entity.stats.max_hp;
-    const barWidth = 50;
+    const barWidth = 54;
     const barHeight = 6;
-    const x = entity.pos.x - barWidth/2;
-    const y = entity.pos.y - 32;
+    const x = entity.pos.x - barWidth / 2;
+    const y = entity.pos.y - 40;
     this.ctx.fillStyle = "#330000";
     this.ctx.fillRect(x, y, barWidth, barHeight);
     this.ctx.fillStyle = "#cc5555";
     this.ctx.fillRect(x, y, barWidth * hpPercent, barHeight);
-    // Name label
-    this.ctx.font = "8px 'Courier New', monospace";
-    this.ctx.fillStyle = "rgba(200,169,110,0.8)";
-    this.ctx.fillText(entity.name.slice(0,10), x, y-2);
+    this.ctx.font = "9px 'Courier New', monospace";
+    this.ctx.fillStyle = "rgba(200,169,110,0.9)";
+    this.ctx.fillText(entity.name.slice(0, 12), x, y - 4);
   }
 }
