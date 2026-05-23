@@ -1,6 +1,6 @@
 import { STAGE, darken, rgba, showError, executionBridge } from './helpers.js';
 import { drawShape } from './renderer.js';
-import { vault, selectedVaultId, deleteVaultEntry, getSelectedEntry, setSelectedVaultId, renderVaultGrid } from './vault.js';
+import { vault, selectedVaultId, deleteVaultEntry, getSelectedEntry, setSelectedVaultId, renderVaultGrid, saveToVault } from './vault.js';  // ADD saveToVault
 
 let stageBg, stageDom, canvas, ctx, loadUI, hudName, hudType, hudId, hudLore, statA, statB, stageEmpty;
 let animId = null;
@@ -234,11 +234,19 @@ export function initViewer() {
     } catch(e) { showError('JSON error: ' + e.message); }
   });
 
-  document.getElementById('view-chars-btn').addEventListener('click', enterViewMode);
+  document.getElementById('vault-view-btn').addEventListener('click', () => {
+    const entry = getSelectedEntry();
+    if (entry) {
+      renderCharacter(JSON.parse(JSON.stringify(entry.data)));
+      setSelectedVaultId(null);
+      updateVaultUIElements();   // update buttons after clearing selection
+    }
+  });
 
   document.getElementById('save-vault-btn').addEventListener('click', () => {
+    if (!charData) return;
     saveToVault(charData, stageBg.style.background, () => {
-      syncVaultView();
+      updateVaultUIElements();   // update badge after save
     });
   });
 
@@ -251,10 +259,10 @@ export function initViewer() {
 });
 
   document.getElementById('vault-delete-btn').addEventListener('click', () => {
-  if (!selectedVaultId) return;
-  deleteVaultEntry(selectedVaultId);
-  // No extra code needed – deleteVaultEntry already re-renders and resets selection
-});
+    if (!selectedVaultId) return;
+    deleteVaultEntry(selectedVaultId);
+    updateVaultUIElements();   // update buttons after deletion
+  });
 
   document.querySelectorAll('.scale-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
@@ -263,15 +271,15 @@ export function initViewer() {
   });
 }
 
-function updateVaultUIElements() {
+ffunction updateVaultUIElements() {
   const badge = document.getElementById('vcb-badge');
   if (badge) {
     badge.textContent = vault.length;
     badge.classList.toggle('show', vault.length > 0);
   }
-  const active = selectedVaultId !== null;
   const viewBtn = document.getElementById('vault-view-btn');
   const delBtn = document.getElementById('vault-delete-btn');
+  const active = selectedVaultId !== null;
   if (viewBtn && delBtn) {
     viewBtn.disabled = !active;
     delBtn.disabled = !active;
