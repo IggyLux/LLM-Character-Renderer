@@ -1,6 +1,6 @@
 import { STAGE, darken, rgba, showError, executionBridge } from './helpers.js';
 import { drawShape } from './renderer.js';
-import { vaultLoad, saveToVault, renderVaultGrid, vault, selectedVaultId, setSelectedVaultId, vaultDeleteRecord } from './vault.js';
+import { vault, selectedVaultId, deleteVaultEntry, getSelectedEntry, setSelectedVaultId, renderVaultGrid } from './vault.js';
 
 let stageBg, stageDom, canvas, ctx, loadUI, hudName, hudType, hudId, hudLore, statA, statB, stageEmpty;
 let animId = null;
@@ -243,30 +243,18 @@ export function initViewer() {
   });
 
   document.getElementById('vault-view-btn').addEventListener('click', () => {
-    if (!selectedVaultId) return;
-    const entry = vault.find(v => v.id === selectedVaultId);
-    if (entry) {
-      renderCharacter(JSON.parse(JSON.stringify(entry.data)));
-      setSelectedVaultId(null);
-      syncVaultView();
-    }
-  });
+  const entry = getSelectedEntry();
+  if (entry) {
+    renderCharacter(JSON.parse(JSON.stringify(entry.data)));
+    setSelectedVaultId(null);  // clears selection after viewing
+  }
+});
 
-  document.getElementById('vault-delete-btn').addEventListener('click', async () => {
-    if (!selectedVaultId) return;
-    const idToDelete = selectedVaultId;
-    const idx = vault.findIndex(v => v.id === idToDelete);
-    if (idx !== -1) {
-      try {
-        await vaultDeleteRecord(idToDelete);
-        vault.splice(idx, 1);
-        setSelectedVaultId(null);
-        syncVaultView();
-      } catch (err) {
-        showError('Delete failed: ' + err.message);
-      }
-    }
-  });
+  document.getElementById('vault-delete-btn').addEventListener('click', () => {
+  if (!selectedVaultId) return;
+  deleteVaultEntry(selectedVaultId);
+  // No extra code needed – deleteVaultEntry already re-renders and resets selection
+});
 
   document.querySelectorAll('.scale-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
