@@ -1,6 +1,6 @@
 // BattleManager.js — Weapon effects, richer arena, overlay victory screen
 
-import { renderMiniCharacter } from '../renderer.js';
+import { renderMiniCharacter, renderMiniCharacterAnimated } from '../renderer.js';
 import { CharacterEntity }     from './CharacterEntity.js';
 
 // ─────────────────────────────────────────────
@@ -464,10 +464,12 @@ export class BattleManager {
     this.lastTimestamp = 0;
     this.isRunning     = false;
     this.logCallback   = null;
-    this.globalT       = 0;    // passed to CharacterEntity for drift
+    this.globalT       = 0;
 
-    // Offscreen character cache: Map<entity, {canvas, dirty}>
-    this._charCache = new Map();
+    // Per-entity offscreen canvas (recreated each frame for animation)
+    // and per-entity particle state scope (persisted across frames)
+    this._offscreens   = new Map(); // entity → {canvas, ctx}
+    this._pStateScopes = new Map(); // entity → {} particle state
   }
 
   setLogCallback(cb) {
@@ -477,7 +479,8 @@ export class BattleManager {
 
   setCharacters(playerChar, npcChars) {
     this.entities    = [];
-    this._charCache  = new Map();
+    this._offscreens   = new Map();
+    this._pStateScopes = new Map();
     this.effects     = [];
 
     const playerEntity = new CharacterEntity(playerChar, this.width * 0.2, this.height / 2, true);
@@ -656,23 +659,30 @@ export class BattleManager {
     const finalSize = 112;
     const offSize   = 224;
 
-    // Use cached offscreen canvas (characters don't change mid-battle)
-    if (!this._charCache.has(entity)) {
+    // Get or create a persistent offscreen canvas per entity
+    if (!this._offscreens.has(entity)) {
       const off = document.createElement('canvas');
       off.width = off.height = offSize;
-      renderMiniCharacter(entity.data, off);
-      this._charCache.set(entity, off);
+      this._offscreens.set(entity, off);
     }
-    const offCanvas = this._charCache.get(entity);
+    // Get or create a persistent particle state scope per entity
+    if (!this._pStateScopes.has(entity)) {
+      this._pStateScopes.set(entity, {});
+    }
+
+    const offCanvas    = this._offscreens.get(entity);
+    const pStateScope  = this._pStateScopes.get(entity);
+
+    // Redraw every frame with live globalT so all animations run
+    renderMiniCharacterAnimated(entity.data, offCanvas, this.globalT, pStateScope);
 
     const ctx = this.ctx;
     ctx.save();
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
 
-    // Subtle shadow under each character
-    ctx.shadowColor  = 'rgba(0,0,0,0.5)';
-    ctx.shadowBlur   = 12;
+    ctx.shadowColor   = 'rgba(0,0,0,0.5)';
+    ctx.shadowBlur    = 12;
     ctx.shadowOffsetY = 6;
 
     ctx.drawImage(
@@ -683,8 +693,8 @@ export class BattleManager {
       finalSize
     );
 
-    ctx.shadowColor = 'transparent';
-    ctx.shadowBlur  = 0;
+    ctx.shadowColor   = 'transparent';
+    ctx.shadowBlur    = 0;
     ctx.shadowOffsetY = 0;
 
     // Player indicator ring
