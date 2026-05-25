@@ -122,6 +122,7 @@ function drawParticles(ctx, s) {
   });
 }
 
+// ── Static thumbnail (vault cards, one-shot render at t=0) ──────────────
 export function renderMiniCharacter(data, targetCanvas) {
   const mCtx = targetCanvas.getContext('2d');
   const w = targetCanvas.width;
@@ -140,4 +141,84 @@ export function renderMiniCharacter(data, targetCanvas) {
     } catch(e) { /* ignore errors in thumbnails */ }
   }
   mCtx.restore();
+}
+
+// ── Animated arena render — called every frame with live t ──────────────
+// pStateScope: a plain object owned by the arena entity so particle state
+// is isolated per-character and never collides with the viewer's pState.
+export function renderMiniCharacterAnimated(data, targetCanvas, t, pStateScope) {
+  const mCtx = targetCanvas.getContext('2d');
+  const w = targetCanvas.width;
+  const h = targetCanvas.height;
+  if (!w || !h) return;
+
+  mCtx.clearRect(0, 0, w, h);
+  const scale = w / STAGE;
+  mCtx.save();
+  mCtx.scale(scale, scale);
+
+  // Draw shapes — pass live t so expressions and rotations animate
+  (data.canvas_shapes || []).forEach(s => {
+    // Particle systems need their own scoped state object
+    if (s.type === 'particle_system') {
+      drawParticlesScoped(mCtx, s, pStateScope);
+    } else {
+      drawShape(mCtx, targetCanvas, s, t);
+    }
+  });
+
+  // Execute canvas_code with live t
+  if (data.canvas_code) {
+    try {
+      new Function('ctx', 'canvas', 't', 'size', 'data', 'helpers',
+        'with(helpers){' + data.canvas_code + '}'
+      )(mCtx, targetCanvas, t, STAGE, data, executionBridge);
+    } catch(e) { /* silent — arena shouldn't crash on bad canvas_code */ }
+  }
+
+  // Weapon canvas_code composited on top
+  if (data.weapon?.canvas_code) {
+    try {
+      new Function('ctx', 'canvas', 't', 'size', 'data', 'helpers',
+        'with(helpers){' + data.weapon.canvas_code + '}'
+      )(mCtx, targetCanvas, t, STAGE, data, executionBridge);
+    } catch(e) {}
+  }
+
+  mCtx.restore();
+}
+
+// Scoped particle draw — uses caller-supplied state object instead of
+// the module-level pState, so each arena entity has independent particles.
+function drawParticlesScoped(ctx, s, scope) {
+  const id = s.id || 'ps_default';
+  if (!scope[id]) {
+    scope[id] = Array.from({ length: s.count || 20 }, () => ({
+      x:       (Math.random() - .5) * (s.spread_x || 80),
+      y:       (Math.random() - .5) * (s.spread_y || 80),
+      vx:      (Math.random() - .5) * (s.velocity || 1),
+      vy:      (Math.random() - .5) * (s.velocity || 1) - (s.rise || 0),
+      life:    Math.random(),
+      maxLife: .5 + Math.random() * .5,
+      size:    (s.min_size || 2) + Math.random() * ((s.max_size || 5) - (s.min_size || 2)),
+      color:   Array.isArray(s.colors)
+                 ? s.colors[Math.floor(Math.random() * s.colors.length)]
+                 : (s.color || '#fff'),
+    }));
+  }
+  scope[id].forEach(p => {
+    p.x += p.vx; p.y += p.vy; p.life += .016;
+    if (p.life > p.maxLife) {
+      p.x    = (Math.random() - .5) * (s.spread_x || 80);
+      p.y    = (Math.random() - .5) * (s.spread_y || 80);
+      p.life = 0;
+    }
+    ctx.save();
+    ctx.globalAlpha = 1 - (p.life / p.maxLife);
+    ctx.fillStyle   = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  });
 }
